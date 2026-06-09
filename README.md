@@ -1,2 +1,324 @@
 # photo-editor-simple
 my photo editor
+```html
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photo Studio Pro</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Segoe UI,sans-serif;
+}
+
+body{
+    background:#0f172a;
+    color:white;
+}
+
+.hero{
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+    gap:20px;
+}
+
+.hero h1{
+    font-size:4rem;
+}
+
+.hero p{
+    color:#94a3b8;
+}
+
+.btn{
+    background:#3b82f6;
+    color:white;
+    border:none;
+    padding:12px 24px;
+    border-radius:12px;
+    cursor:pointer;
+}
+
+.editor{
+    padding:30px;
+    max-width:1200px;
+    margin:auto;
+}
+
+.card{
+    background:#1e293b;
+    padding:20px;
+    border-radius:20px;
+}
+
+.preview{
+    width:100%;
+    max-height:600px;
+    object-fit:contain;
+    background:#0f172a;
+    border-radius:15px;
+    margin-top:15px;
+}
+
+.controls{
+    margin-top:20px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:15px;
+}
+
+.control{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+input[type=range]{
+    width:100%;
+}
+
+.toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:20px;
+}
+
+video{
+    width:100%;
+    border-radius:15px;
+    margin-top:15px;
+}
+</style>
+</head>
+<body>
+
+<section class="hero">
+    <h1>Photo Studio Pro</h1>
+    <p>Edit foto langsung dari galeri atau kamera</p>
+
+    <a href="#editor">
+        <button class="btn">Mulai Edit</button>
+    </a>
+</section>
+
+<section class="editor" id="editor">
+
+<div class="card">
+
+<h2>Editor Foto</h2>
+
+<br>
+
+<input type="file" id="upload" accept="image/*">
+
+<div class="toolbar">
+    <button class="btn" onclick="startCamera()">Buka Kamera</button>
+    <button class="btn" onclick="capturePhoto()">Ambil Foto</button>
+    <button class="btn" onclick="rotateLeft()">↺ Rotate</button>
+    <button class="btn" onclick="flipImage()">⇋ Flip</button>
+    <button class="btn" onclick="resetImage()">Reset</button>
+    <button class="btn" onclick="downloadImage()">Download</button>
+</div>
+
+<video id="video" autoplay playsinline></video>
+
+<img id="image" class="preview">
+
+<div class="controls">
+
+<div class="control">
+<label>Brightness</label>
+<input type="range" id="brightness" min="0" max="200" value="100">
+</div>
+
+<div class="control">
+<label>Contrast</label>
+<input type="range" id="contrast" min="0" max="200" value="100">
+</div>
+
+<div class="control">
+<label>Saturation</label>
+<input type="range" id="saturation" min="0" max="300" value="100">
+</div>
+
+<div class="control">
+<label>Sepia</label>
+<input type="range" id="sepia" min="0" max="100" value="0">
+</div>
+
+<div class="control">
+<label>Blur</label>
+<input type="range" id="blur" min="0" max="10" value="0">
+</div>
+
+<div class="control">
+<label>Grayscale</label>
+<input type="range" id="grayscale" min="0" max="100" value="0">
+</div>
+
+</div>
+
+<canvas id="canvas" style="display:none"></canvas>
+
+</div>
+
+</section>
+
+<script>
+const image = document.getElementById("image");
+const upload = document.getElementById("upload");
+const video = document.getElementById("video");
+
+let rotation = 0;
+let flipped = false;
+
+const brightness = document.getElementById("brightness");
+const contrast = document.getElementById("contrast");
+const saturation = document.getElementById("saturation");
+const sepia = document.getElementById("sepia");
+const blur = document.getElementById("blur");
+const grayscale = document.getElementById("grayscale");
+
+upload.addEventListener("change",(e)=>{
+    const file = e.target.files[0];
+
+    if(!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = ()=>{
+        image.src = reader.result;
+    };
+
+    reader.readAsDataURL(file);
+});
+
+async function startCamera(){
+    try{
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video:true
+        });
+
+        video.srcObject = stream;
+    }catch(err){
+        alert("Kamera tidak tersedia");
+    }
+}
+
+function capturePhoto(){
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    ctx.drawImage(video,0,0);
+
+    image.src = canvas.toDataURL("image/png");
+}
+
+function updateFilter(){
+
+    image.style.filter = `
+    brightness(${brightness.value}%)
+    contrast(${contrast.value}%)
+    saturate(${saturation.value}%)
+    sepia(${sepia.value}%)
+    blur(${blur.value}px)
+    grayscale(${grayscale.value}%)
+    `;
+
+    image.style.transform =
+    `rotate(${rotation}deg)
+     scaleX(${flipped ? -1 : 1})`;
+}
+
+[
+brightness,
+contrast,
+saturation,
+sepia,
+blur,
+grayscale
+].forEach(el=>{
+    el.addEventListener("input",updateFilter);
+});
+
+function rotateLeft(){
+    rotation -= 90;
+    updateFilter();
+}
+
+function flipImage(){
+    flipped = !flipped;
+    updateFilter();
+}
+
+function resetImage(){
+
+    brightness.value = 100;
+    contrast.value = 100;
+    saturation.value = 100;
+    sepia.value = 0;
+    blur.value = 0;
+    grayscale.value = 0;
+
+    rotation = 0;
+    flipped = false;
+
+    updateFilter();
+}
+
+function downloadImage(){
+
+    if(!image.src){
+        alert("Upload foto dulu");
+        return;
+    }
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+
+    ctx.filter = `
+    brightness(${brightness.value}%)
+    contrast(${contrast.value}%)
+    saturate(${saturation.value}%)
+    sepia(${sepia.value}%)
+    blur(${blur.value}px)
+    grayscale(${grayscale.value}%)
+    `;
+
+    ctx.drawImage(
+        image,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    const link = document.createElement("a");
+
+    link.download = "photo-studio-pro.png";
+    link.href = canvas.toDataURL();
+
+    link.click();
+}
+</script>
+
+</body>
+</html>
+```
